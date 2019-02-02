@@ -43,42 +43,6 @@ CubeVertex kCubeVertices[] =
   { -1.f, -1.f, +1.f, 0.f, -1.f, 0.f },
   { +1.f, -1.f, +1.f, 0.f, -1.f, 0.f },
 };
-/*struct CubeVertex
-{
-  float x,y,z;
-};
-CubeVertex kCubeVertices[] =
-{
-  { +1.f, -1.f, +1.f},
-  { -1.f, -1.f, +1.f},
-  { -1.f, +1.f, +1.f},
-  { +1.f, +1.f, +1.f},
-  
-  { -1.f, -1.f, -1.f},
-  { +1.f, -1.f, -1.f},
-  { +1.f, +1.f, -1.f},
-  { -1.f, +1.f, -1.f},
-  
-  { +1.f, +1.f, -1.f},
-  { +1.f, -1.f, -1.f},
-  { +1.f, -1.f, +1.f},
-  { +1.f, +1.f, +1.f},
-  
-  { -1.f, -1.f, -1.f},
-  { -1.f, +1.f, -1.f},
-  { -1.f, +1.f, +1.f},
-  { -1.f, -1.f, +1.f},
-  
-  { -1.f, +1.f, -1.f},
-  { +1.f, +1.f, -1.f},
-  { +1.f, +1.f, +1.f},
-  { -1.f, +1.f, +1.f},
-  
-  { +1.f, -1.f, -1.f},
-  { -1.f, -1.f, -1.f},
-  { -1.f, -1.f, +1.f},
-  { +1.f, -1.f, +1.f},
-};*/
 
 uint16_t kCubeIndices[] =
 {
@@ -277,16 +241,11 @@ Renderer::Renderer() {
   gl_check_error("post ctor");
 }
 
-Renderer::~Renderer() {
-  glDeleteProgram(m_programId);
-}
-
-#define VECTORIAL_PI      3.14159265f
-#define VECTORIAL_HALFPI  1.57079633f
-
+// creates perspective projection matrix for right-handed coordinate system
 static mat4 perspective(float fovy, float aspect, float znear, float zfar) {
-  mat4 m;
-  float radians = fovy * VECTORIAL_HALFPI / 180.0f;
+  
+  const float halfpi = 1.57079633f;
+  float radians = fovy * halfpi / 180.0f;
   float deltaz = zfar - znear;
   float sine = sinf(radians);
   float cotangent = cosf(radians) / sine;
@@ -303,11 +262,12 @@ static mat4 perspective(float fovy, float aspect, float znear, float zfar) {
               0.f, 0.f, -1.f, 0.f);
 }
 
+// creates orthagonal projection matrix for right-handed coordinate system
 static mat4 ortho(float left, float right, float bottom, float top, float znear, float zfar) {
   float deltax = right - left;
   float deltay = top - bottom;
   float deltaz = zfar - znear;
-
+  
   float a = 2.0f / deltax;
   float b = -(right + left) / deltax;
   float c = 2.0f / deltay;
@@ -319,8 +279,9 @@ static mat4 ortho(float left, float right, float bottom, float top, float znear,
               0.f, c, 0.f, d,
               0.f, 0.f, e, f,
               0.f, 0.f, 0.f, 1.f);
- }
+}
 
+// creates view martrix
 static mat4 create_view(vec3 eye, vec3 lookat, vec3 up) {
   vec3 forward = vec3::normalize(eye - lookat);
   vec3 right = vec3::normalize(vec3::cross(up, forward));
@@ -330,6 +291,27 @@ static mat4 create_view(vec3 eye, vec3 lookat, vec3 up) {
               real_up.x, real_up.y, real_up.z, -vec3::dot(real_up, eye),
               forward.x, forward.y, forward.z, -vec3::dot(forward, eye),
               0.f, 0.f, 0.f, 1.f);
+}
+
+// pitch, yaw in radians
+static mat4 create_view(vec3 eye, float pitch, float yaw) {
+  float cosPitch = cos(pitch);
+  float sinPitch = sin(pitch);
+  float cosYaw = cos(yaw);
+  float sinYaw = sin(yaw);
+  
+  vec3 right(cosYaw, 0, -sinYaw);
+  vec3 up(sinYaw * sinPitch, cosPitch, cosYaw * sinPitch);
+  vec3 forward(sinYaw * cosPitch, -sinPitch, cosPitch * cosYaw);
+  
+  return mat4(right.x, right.y, right.z, -vec3::dot(right, eye),
+              up.x, up.y, up.z, -vec3::dot(up, eye),
+              forward.x, forward.y, forward.z, -vec3::dot(forward, eye),
+              0.f, 0.f, 0.f, 1.f);
+}
+
+Renderer::~Renderer() {
+  glDeleteProgram(m_programId);
 }
 
 void Renderer::BeginScene(int width, int height) {
@@ -345,13 +327,13 @@ void Renderer::BeginScene(int width, int height) {
   glEnable(GL_DEPTH_TEST);
   glDepthFunc(GL_LESS);
   
-  glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
+  //glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
   
   static float r,g,b = 0.f;
   
-  //r+= 0.01f;
-  //g+= 0.001f;
-  //b+= 0.0001f;
+  r+= 0.01f;
+  g+= 0.001f;
+  b+= 0.0001f;
   if(r > 1.f) r = 0.f;
   if(g > 1.f) g = 0.f;
   if(b > 1.f) b = 0.f;
@@ -387,16 +369,6 @@ void Renderer::RenderScene(vec3 cameraPosition, vec3 modelTranslation) {
   const int eyeLoc = glGetUniformLocation(m_programId, "EyePosition");
   const int lightLoc = glGetUniformLocation(m_programId, "LightPosition");
   
-  //const vec3 cameraPosition(0.f, 0.f, 10.f);
-  //const vec3 cameraRight = vec3::kUnitX;
-  //const vec3 cameraUp = vec3::kUnitY;
-  //const vec3 cameraLookAt = -vec3::kUnitZ;
-  
-  //const vec3 cameraPosition(0.f, 0.f, 0.f);
-  
-  
-  const vec3 lightPosition(10.f, 10.f, 10.f);
-  
   if ( eyeLoc >= 0 )
   {
     glUniform3fv(eyeLoc, 1, cameraPosition.coords);
@@ -405,29 +377,23 @@ void Renderer::RenderScene(vec3 cameraPosition, vec3 modelTranslation) {
   
   if (lightLoc >= 0)
   {
+    const vec3 lightPosition(10.f, 10.f, 10.f);
     glUniform3fv(lightLoc, 1, lightPosition.coords);
     gl_check_error("lightLoc");
   }
   
 #if 1
   const vec3 lookAt = modelTranslation;
-  //vec3 aim = vec3::normalize(lookAt - cameraPosition);
-  vec3 aim = vec3::normalize(cameraPosition - lookAt); // is this for sure ok? not the above one?
-  const vec3 cameraRight = vec3::cross(vec3::kUnitY, aim);
-  const vec3 cameraUp = vec3::cross(aim, cameraRight);
-  const vec3 cameraFront = aim;
 #else
   const vec3 lookAt = cameraPosition - vec3::kUnitZ;
-  const vec3 cameraRight = vec3::kUnitX;
-  const vec3 cameraUp = vec3::kUnitY;
-  const vec3 cameraFront = -vec3::kUnitZ;
 #endif
   
   static float angle = 0.f;
-  angle += 0.01f;
   static float scaleAmount = 1.f;
-  scaleAmount -= 0.01f;
-  if(scaleAmount <= 0.f) scaleAmount = 1.f;
+  //angle += 0.01f;
+  //scaleAmount -= 0.01f;
+  //if(scaleAmount <= 0.f) scaleAmount = 1.f;
+  
   const mat4 translation = mat4::translation(modelTranslation);
   const mat4 rotation = mat4::rotation(vec3::kUnitY, angle);
   const mat4 scale = mat4::scale(scaleAmount, scaleAmount, scaleAmount);
@@ -436,21 +402,9 @@ void Renderer::RenderScene(vec3 cameraPosition, vec3 modelTranslation) {
   const mat4 view = create_view(cameraPosition, lookAt, vec3::kUnitY);
   const mat4 projection = perspective(40.f, m_ar, 0.1f, 100.f);
   //const mat4 projection = ortho(-10.f, 10.f, -10.f, 10.f, 0.1f, 100.f);
+  
   const mat4 modelView = view * model;
   const mat4 modelViewProjection = projection * modelView;
-  
-  vec4 input(1.f, 0.f, 0.f, 1.f);
-  vec4 view_out = modelView * input;
-  vec4 proj_out = modelViewProjection * input;
-  printvec("cam", cameraPosition);
-  printvec("pos", modelTranslation);
-  printmat("model", model);
-  printmat("view", view);
-  printmat("proj", projection);
-  printmat("viewmodel", modelView);
-  printmat("viewmodelproj", modelViewProjection);
-  printvec("view", view_out);
-  printvec("proj", proj_out);
   
   const int modelLoc = glGetUniformLocation(m_programId, "Model");
   const int modelViewLoc = glGetUniformLocation(m_programId, "ModelView");
@@ -472,19 +426,8 @@ void Renderer::RenderScene(vec3 cameraPosition, vec3 modelTranslation) {
   glBindVertexArray(m_cubeVao);
   
   uint32_t numIndices = sizeof(kCubeIndices) / sizeof(kCubeIndices[0]);
-  uint32_t offset = 0;
-  
-  //numIndices /= 2;
-  //offset = sizeof(kCubeIndices) / 2;
-  
-  uint32_t triOffset = 2;
-  uint32_t triNum = 6;
-  
-  //numIndices = triNum * 3;
-  //offset = triOffset * 3 * sizeof(uint16_t);
-  
   glDrawElements(GL_TRIANGLES, numIndices,
-                 GL_UNSIGNED_SHORT, (GLbyte*)offset);
+                 GL_UNSIGNED_SHORT, nullptr);
   
   glBindVertexArray(0);
   glUseProgram(0);
