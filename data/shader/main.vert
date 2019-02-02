@@ -18,5 +18,4 @@ void main()
   Position = vec3(Model * vec4(VertexPosition, 1.0));
   Color = VertexColor;
   gl_Position = ModelViewProjection * vec4( VertexPosition, 1.0 );
-  //gl_Position =  vec4( VertexPosition, 1.0 ) * ModelViewProjection;
 }
