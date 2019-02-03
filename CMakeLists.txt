@@ -42,12 +42,22 @@ set(COMMON_SRC
 	src/common/world.cpp
 	src/common/input.h
 )
-add_executable (Servsim 
+
+add_library(servsim_common
+	${COMMON_SRC}
+)
+target_include_directories(servsim_common PUBLIC
+	src/common
+)
+
+add_executable (servsim_client 
 	src/client/main.mm
 	src/client/renderer.h
 	src/client/renderer.cpp
-	${COMMON_SRC}
 )
 
-target_link_libraries(Servsim ${GLEW_LIBRARIES})
-target_include_directories(Servsim PUBLIC ${GLEW_INCLUDES})
+target_link_libraries (servsim_client servsim_common ${GLEW_LIBRARIES})
+target_include_directories (servsim_client PUBLIC ${GLEW_INCLUDES})
+
+source_group (client src/client/*)
+source_group (common src/common/*)
