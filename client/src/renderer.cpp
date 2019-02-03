@@ -4,7 +4,7 @@
 #include <string.h>
 #include <OpenGL/gl3.h>
 
-#include "../common/world.h"
+#include "common/world.h"
 
 struct CubeVertex
 {

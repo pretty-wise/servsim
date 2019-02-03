@@ -32,28 +32,28 @@ set (CMAKE_EXE_LINKER_FLAGS "-framework Foundation -framework Cocoa -framework O
 find_package(GLEW REQUIRED)
 
 set(COMMON_SRC
-	src/common/mat4.h
-	src/common/mat4.cpp
-	src/common/vec3.h
-	src/common/vec3.cpp
-	src/common/vec4.h
-	src/common/vec4.cpp
-	src/common/world.h
-	src/common/world.cpp
-	src/common/input.h
+	common/include/common/vec3.h
+	common/include/common/mat4.h
+	common/include/common/vec4.h
+	common/include/common/world.h
+	common/include/common/input.h
+	common/src/vec3.cpp
+	common/src/vec4.cpp
+	common/src/mat4.cpp
+	common/src/world.cpp
 )
 
 add_library(servsim_common
 	${COMMON_SRC}
 )
 target_include_directories(servsim_common PUBLIC
-	src/common
+	common/include
 )
 
 add_executable (servsim_client 
-	src/client/main.mm
-	src/client/renderer.h
-	src/client/renderer.cpp
+	client/src/main.mm
+	client/src/renderer.h
+	client/src/renderer.cpp
 )
 
 target_link_libraries (servsim_client servsim_common ${GLEW_LIBRARIES})

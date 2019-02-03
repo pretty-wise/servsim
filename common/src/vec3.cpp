@@ -1,4 +1,4 @@
-#include "vec3.h"
+#include "common/vec3.h"
 
 const vec3 vec3::kIdentity(1.f, 1.f, 1.f);
 const vec3 vec3::kZero(0.f, 0.f, 0.f);

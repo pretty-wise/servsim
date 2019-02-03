@@ -1,8 +1,8 @@
 #include <stdio.h>
-#include "renderer.h"
-#include "../common/world.h"
-#include "../common/vec3.h"
 #import <Cocoa/Cocoa.h>
+#include "common/world.h"
+#include "common/vec3.h"
+#include "renderer.h"
 
 @interface ServsimView : NSOpenGLView
 {

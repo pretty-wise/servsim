@@ -1,6 +1,6 @@
 #pragma once
 #include <stdint.h>
-#include "../common/mat4.h"
+#include "common/mat4.h"
 
 struct World;
 

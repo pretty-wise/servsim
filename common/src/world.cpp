@@ -1,4 +1,4 @@
-#include "world.h"
+#include "common/world.h"
 
 static void tick_world(const World& previous, const Input& input, World& next) {
   const float kMoveDelta = 0.1f;
