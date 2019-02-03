@@ -50,14 +50,18 @@ target_include_directories(servsim_common PUBLIC
 	common/include
 )
 
-add_executable (servsim_client 
+set (CLIENT_SRC
 	client/src/main.mm
 	client/src/renderer.h
 	client/src/renderer.cpp
 )
 
+add_executable (servsim_client 
+	${CLIENT_SRC}
+)
+
 target_link_libraries (servsim_client servsim_common ${GLEW_LIBRARIES})
 target_include_directories (servsim_client PUBLIC ${GLEW_INCLUDES})
 
-source_group (client src/client/*)
-source_group (common src/common/*)
+source_group (TREE ../client FILES ${CLIENT_SRC})
+source_group (TREE ../common FILES ${COMMON_SRC})
