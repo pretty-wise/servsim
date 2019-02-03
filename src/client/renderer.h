@@ -2,13 +2,15 @@
 #include <stdint.h>
 #include "../common/mat4.h"
 
+struct World;
+
 class Renderer {
 public:
   Renderer();
   ~Renderer();
   
   void BeginScene(int width, int height);
-  void RenderScene(vec3 cameraPosition, vec3 modelTranslation);
+  void RenderWorld(vec3 cameraPosition, const World& world);
   void EndScene();
 private:
   uint32_t m_programId;

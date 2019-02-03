@@ -38,6 +38,9 @@ set(COMMON_SRC
 	src/common/vec3.cpp
 	src/common/vec4.h
 	src/common/vec4.cpp
+	src/common/world.h
+	src/common/world.cpp
+	src/common/input.h
 )
 add_executable (Servsim 
 	src/client/main.mm

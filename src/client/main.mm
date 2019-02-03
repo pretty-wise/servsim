@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include "renderer.h"
+#include "../common/world.h"
 #include "../common/vec3.h"
 #import <Cocoa/Cocoa.h>
 
@@ -7,8 +8,8 @@
 {
   NSTimer* animationTimer;
   Renderer* m_renderer;
-  
-  vec3 m_modelTranslation;
+  Game* m_game;
+  Input m_input;
   vec3 m_cameraPosition;
 }
 @end
@@ -23,8 +24,7 @@
 -(void)prepareOpenGL
 {
   [super prepareOpenGL];
-  
-  m_modelTranslation = vec3(0.f, 0.f, 0.f);
+
   m_cameraPosition = vec3(0.f, 0.f, 10.f);
 	
 #ifndef DEBUG
@@ -35,37 +35,40 @@
 #endif
   
   m_renderer = new Renderer();
+  m_game = new Game();
 }
 
 -(void)keyDown:(NSEvent *)event
 {
-  const float translationDelta = 0.1f;
+  const float cameraDelta = 0.1f;
   NSString* chars = [event charactersIgnoringModifiers];
   if([chars length] == 1) {
     unichar c = [chars characterAtIndex:0];
     if(c == NSLeftArrowFunctionKey) {
-      m_modelTranslation.x -= translationDelta;
+      m_cameraPosition.x -= cameraDelta;
     } else if(c == NSRightArrowFunctionKey) {
-      m_modelTranslation.x += translationDelta;
+      m_cameraPosition.x += cameraDelta;
     } else if(c == NSUpArrowFunctionKey) {
-      m_modelTranslation.y += translationDelta;
+      m_cameraPosition.y += cameraDelta;
     } else if(c == NSDownArrowFunctionKey) {
-      m_modelTranslation.y -= translationDelta;
+      m_cameraPosition.y -= cameraDelta;
     }
     
-    const float cameraDelta = 0.1f;
     if(c == 'a') {
-      m_cameraPosition.x -= cameraDelta;
-    } else if(c == 'd') {
-      m_cameraPosition.x += cameraDelta;
-    } else if(c == 'w') {
-      m_cameraPosition.y += cameraDelta;
-    } else if(c == 's') {
-      m_cameraPosition.y -= cameraDelta;
-    } else if(c == 'r') {
-      m_cameraPosition.z -= cameraDelta;
-    } else if(c == 'f') {
-      m_cameraPosition.z += cameraDelta;
+      m_input.SetKeyDown(Input::Key::kLeft);
+    }
+    if(c == 'd') {
+      m_input.SetKeyDown(Input::Key::kRight);
+    }
+    if(c == 'w') {
+      m_input.SetKeyDown(Input::Key::kForward);
+    }
+    if(c == 's') {
+      m_input.SetKeyDown(Input::Key::kBack);
+    }
+    if(c == 'r') {
+    }
+    if(c == 'f') {
     }
     return;
   }
@@ -74,30 +77,41 @@
 
 -(void)keyUp:(NSEvent *)event
 {
-  
+  NSString* chars = [event charactersIgnoringModifiers];
+  if([chars length] == 1) {
+    unichar c = [chars characterAtIndex:0];
+    if(c == 'a') {
+      m_input.SetKeyUp(Input::Key::kLeft);
+    }
+    if(c == 'd') {
+      m_input.SetKeyUp(Input::Key::kRight);
+    }
+    if(c == 'w') {
+      m_input.SetKeyUp(Input::Key::kForward);
+    }
+    if(c == 's') {
+      m_input.SetKeyUp(Input::Key::kBack);
+    }
+    if(c == 'r') {
+    }
+    if(c == 'f') {
+    }
+    return;
+  }
+  [super keyDown:event];
 }
 
 -(void)updateAndDrawDemoView:(int)width Height:(int)height
 {
+  if(m_input.IsAnyDown()) {
+    m_game->UpdateInput(m_input);
+  }
+  m_game->Update(16.f);
   m_renderer->BeginScene(width, height);
-  m_renderer->RenderScene(m_cameraPosition, m_modelTranslation);
-  //m_renderer->RenderScene(m_cameraPosition, m_modelTranslation + vec3(2.5f, 0.f, 0.f));
+  m_renderer->RenderWorld(m_cameraPosition, m_game->GetCurrentState());
   m_renderer->EndScene();
 
-// Rendering
-//ImGui::Render();
-[[self openGLContext] makeCurrentContext];
-
-  //ImGuiIO& io = ImGui::GetIO();
-  //GLsizei width  = (GLsizei)(io.DisplaySize.x * io.DisplayFramebufferScale.x);
-  //GLsizei height = (GLsizei)(io.DisplaySize.y * io.DisplayFramebufferScale.y);
-  //glViewport(0, 0, width, height);
-
-  //glClearColor(clear_color.x, clear_color.y, clear_color.z, clear_color.w);
-  //glClear(GL_COLOR_BUFFER_BIT);
-  //ImGui_ImplOpenGL2_RenderDrawData(ImGui::GetDrawData());
-
-  // Present
+  [[self openGLContext] makeCurrentContext];
   [[self openGLContext] flushBuffer];
 
   if (!animationTimer)

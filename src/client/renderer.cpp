@@ -3,7 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <OpenGL/gl3.h>
-#include <OpenGL/gl.h>
+
+#include "../common/world.h"
 
 struct CubeVertex
 {
@@ -65,9 +66,27 @@ uint16_t kCubeIndices[] =
   20, 22, 23,
 };
 
+static void printvec(const char* str, vec4 value) {
+  printf("%s: (%.3f, %.3f, %.3f, %.3f)\n", str, value.x, value.y, value.z, value.w);
+}
+
+static void printmat(const char* str, mat4 mat) {
+  printf("%s\n", str);
+  printf("%.3f, %.3f, %.3f, %.3f\n", mat.matrix[0], mat.matrix[4], mat.matrix[8], mat.matrix[12]);
+  printf("%.3f, %.3f, %.3f, %.3f\n", mat.matrix[1], mat.matrix[5], mat.matrix[9], mat.matrix[13]);
+  printf("%.3f, %.3f, %.3f, %.3f\n", mat.matrix[2], mat.matrix[6], mat.matrix[10], mat.matrix[14]);
+  printf("%.3f, %.3f, %.3f, %.3f\n", mat.matrix[3], mat.matrix[7], mat.matrix[11], mat.matrix[15]);
+}
+
+static void printvec(const char* str, vec3 value) {
+  printvec(str, vec4(value.x, value.y, value.z, 0.f));
+}
+
 static void gl_check_error(const char* tagName) {
   GLenum error = glGetError();
-  printf("gl error status: %d, '%s'\n", error, tagName);
+  if(error != 0) {
+    printf("gl error status: %d, '%s'\n", error, tagName);
+  }
 }
 
 static const char* read_file(const char* filename) {
@@ -212,17 +231,6 @@ Renderer::Renderer() {
     
     const int positionLoc = glGetAttribLocation(m_programId, "VertexPosition");
     const int normalLoc = glGetAttribLocation(m_programId, "VertexNormal");
-    //const int colorLoc = glGetAttribLocation(m_programId, "VertexColor");
-    
-    const int modelLoc = glGetUniformLocation(m_programId, "Model"); //glGetAttribLocation(m_programId, "Model");
-    const int modelViewLoc = glGetUniformLocation(m_programId, "ModelView");
-    const int modelViewProjectionLoc = glGetUniformLocation(m_programId, "ModelViewProjection");
-    const int colorLoc = glGetUniformLocation(m_programId, "VertexColor");
-    
-    if(colorLoc >= 0) {
-      vec4 color(1.f, 0.f, 1.f, 1.f);
-      glUniform4fv(colorLoc, 1, color.coords);
-    }
     
     if(positionLoc >= 0) {
       glEnableVertexAttribArray(positionLoc);
@@ -330,10 +338,9 @@ void Renderer::BeginScene(int width, int height) {
   //glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
   
   static float r,g,b = 0.f;
-  
-  r+= 0.01f;
-  g+= 0.001f;
-  b+= 0.0001f;
+  //r += 0.01f;
+  //g += 0.001f;
+  //b += 0.0001f;
   if(r > 1.f) r = 0.f;
   if(g > 1.f) g = 0.f;
   if(b > 1.f) b = 0.f;
@@ -347,56 +354,43 @@ void Renderer::BeginScene(int width, int height) {
   gl_check_error("beginscene");
 }
 
-static void printvec(const char* str, vec4 value) {
-  printf("%s: (%.3f, %.3f, %.3f, %.3f)\n", str, value.x, value.y, value.z, value.w);
-}
-
-static void printmat(const char* str, mat4 mat) {
-  printf("%s\n", str);
-  printf("%.3f, %.3f, %.3f, %.3f\n", mat.matrix[0], mat.matrix[4], mat.matrix[8], mat.matrix[12]);
-  printf("%.3f, %.3f, %.3f, %.3f\n", mat.matrix[1], mat.matrix[5], mat.matrix[9], mat.matrix[13]);
-  printf("%.3f, %.3f, %.3f, %.3f\n", mat.matrix[2], mat.matrix[6], mat.matrix[10], mat.matrix[14]);
-  printf("%.3f, %.3f, %.3f, %.3f\n", mat.matrix[3], mat.matrix[7], mat.matrix[11], mat.matrix[15]);
-}
-
-static void printvec(const char* str, vec3 value) {
-  printvec(str, vec4(value.x, value.y, value.z, 0.f));
-}
-
-void Renderer::RenderScene(vec3 cameraPosition, vec3 modelTranslation) {
+void Renderer::RenderWorld(vec3 cameraPosition, const World& world) {
   glUseProgram(m_programId);
   
   const int eyeLoc = glGetUniformLocation(m_programId, "EyePosition");
   const int lightLoc = glGetUniformLocation(m_programId, "LightPosition");
+  const int vertexColorLoc = glGetUniformLocation(m_programId, "VertexColor");
   
-  if ( eyeLoc >= 0 )
-  {
+  if ( eyeLoc >= 0 ) {
     glUniform3fv(eyeLoc, 1, cameraPosition.coords);
     gl_check_error("eyeLoc");
   }
   
-  if (lightLoc >= 0)
-  {
+  if (lightLoc >= 0) {
     const vec3 lightPosition(10.f, 10.f, 10.f);
     glUniform3fv(lightLoc, 1, lightPosition.coords);
     gl_check_error("lightLoc");
   }
   
-#if 1
-  const vec3 lookAt = modelTranslation;
+  if(vertexColorLoc) {
+    vec4 color(world.m_cube.m_color.x, world.m_cube.m_color.y, world.m_cube.m_color.z, 1.f);
+    glUniform4fv(vertexColorLoc, 1, color.coords);
+    gl_check_error("vertexColorLoc");
+  }
+  
+  vec3 model_translation = world.m_cube.m_translation;
+  float model_rotation = world.m_cube.m_rotation;
+  float model_scale = world.m_cube.m_scale;
+  
+#if 0
+  const vec3 lookAt = model_translation;
 #else
   const vec3 lookAt = cameraPosition - vec3::kUnitZ;
 #endif
   
-  static float angle = 0.f;
-  static float scaleAmount = 1.f;
-  //angle += 0.01f;
-  //scaleAmount -= 0.01f;
-  //if(scaleAmount <= 0.f) scaleAmount = 1.f;
-  
-  const mat4 translation = mat4::translation(modelTranslation);
-  const mat4 rotation = mat4::rotation(vec3::kUnitY, angle);
-  const mat4 scale = mat4::scale(scaleAmount, scaleAmount, scaleAmount);
+  const mat4 translation = mat4::translation(model_translation);
+  const mat4 rotation = mat4::rotation(vec3::kUnitY, model_rotation);
+  const mat4 scale = mat4::scale(model_scale, model_scale, model_scale);
   const mat4 model = translation * rotation * scale;
   
   const mat4 view = create_view(cameraPosition, lookAt, vec3::kUnitY);

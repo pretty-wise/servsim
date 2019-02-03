@@ -3,7 +3,7 @@
 uniform mat4 Model;
 uniform mat4 ModelView;
 uniform mat4 ModelViewProjection;
-const vec4 VertexColor = vec4(1.f, 0.f, 1.f, 1.f);
+uniform vec4 VertexColor;
 
 in vec3 VertexPosition;
 in vec3 VertexNormal;
