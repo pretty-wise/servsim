@@ -33,8 +33,6 @@ public:
   inline vec3 operator*(float) const;
   inline vec3 operator/(float) const;
 
-  inline void set(float x, float y, float z);
-
   inline bool operator==(const vec3 &) const;
   inline bool operator!=(const vec3 &) const;
 
@@ -135,14 +133,8 @@ vec3 vec3::operator*(float a) const {
 }
 
 vec3 vec3::operator/(float a) const {
-  float inverse = 1 / a; // dzielenie wolniejsze.
+  float inverse = 1 / a;
   return vec3(x * inverse, y * inverse, z * inverse);
-}
-
-void vec3::set(float _x, float _y, float _z) {
-  x = _x;
-  y = _y;
-  z = _z;
 }
 
 bool vec3::operator==(const vec3 &v) const {

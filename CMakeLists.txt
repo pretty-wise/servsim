@@ -32,11 +32,13 @@ set (CMAKE_EXE_LINKER_FLAGS "-framework Foundation -framework Cocoa -framework O
 find_package(GLEW REQUIRED)
 
 set(COMMON_SRC
+	common/include/common/vec2.h
 	common/include/common/vec3.h
 	common/include/common/mat4.h
 	common/include/common/vec4.h
 	common/include/common/world.h
 	common/include/common/input.h
+	common/src/vec2.cpp
 	common/src/vec3.cpp
 	common/src/vec4.cpp
 	common/src/mat4.cpp

@@ -12,8 +12,7 @@ struct CubeVertex
   float nx,ny,nz;
 };
 
-CubeVertex kCubeVertices[] =
-{
+CubeVertex kCubeVertices[] = {
   { +1.f, -1.f, +1.f, 0.f, 0.f, +1.f },
   { -1.f, -1.f, +1.f, 0.f, 0.f, +1.f },
   { -1.f, +1.f, +1.f, 0.f, 0.f, +1.f },
@@ -45,8 +44,7 @@ CubeVertex kCubeVertices[] =
   { +1.f, -1.f, +1.f, 0.f, -1.f, 0.f },
 };
 
-uint16_t kCubeIndices[] =
-{
+uint16_t kCubeIndices[] = {
   0, 1, 2,
   0, 2, 3,
   
@@ -64,6 +62,19 @@ uint16_t kCubeIndices[] =
   
   20, 21, 22,
   20, 22, 23,
+};
+
+const float kGroundSize = 100.f;
+CubeVertex kGroundVertices[] = {
+  { -kGroundSize, 0.f, kGroundSize }, // far left 0
+  { kGroundSize, 0.f, kGroundSize }, // far right 1
+  { kGroundSize, 0.f, -kGroundSize }, // near right 2
+  { -kGroundSize, 0.f, -kGroundSize } // near left 3
+};
+
+uint16_t kGroundIndices[] = {
+  0, 1, 3,
+  1, 2, 3
 };
 
 static void printvec(const char* str, vec4 value) {
@@ -198,57 +209,6 @@ static uint32_t load_program(const char* vertexShaderPath, const char* fragmentS
   return programId;
 }
 
-Renderer::Renderer() {
-  printf("gl version: %s\n", glGetString(GL_VERSION));
-  printf("glsl version: %s\n", glGetString(GL_SHADING_LANGUAGE_VERSION));
-  m_programId = load_program("shader/main.vert", "shader/main.frag");
-  if(0 == m_programId) {
-    printf("error: program not created\n");
-    return;
-  }
-  
-  
-  gl_check_error("load_program");
-  
-  {
-    glUseProgram(m_programId);
-    
-    glGenBuffers(1, &m_cubeVbo);
-    glBindBuffer(GL_ARRAY_BUFFER, m_cubeVbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(kCubeVertices), kCubeVertices, GL_STATIC_DRAW);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    
-    glGenBuffers(1, &m_cubeIbo);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_cubeIbo);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(kCubeIndices), kCubeIndices, GL_STATIC_DRAW);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-    
-    glGenVertexArrays(1, &m_cubeVao);
-    glBindVertexArray(m_cubeVao);
-    
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_cubeIbo);
-    glBindBuffer(GL_ARRAY_BUFFER, m_cubeVbo);
-    
-    const int positionLoc = glGetAttribLocation(m_programId, "VertexPosition");
-    const int normalLoc = glGetAttribLocation(m_programId, "VertexNormal");
-    
-    if(positionLoc >= 0) {
-      glEnableVertexAttribArray(positionLoc);
-      glVertexAttribPointer(positionLoc, 3, GL_FLOAT, GL_FALSE, sizeof(CubeVertex), (GLubyte*)0);
-    }
-    
-    if(normalLoc >= 0) {
-      glEnableVertexAttribArray(normalLoc);
-      glVertexAttribPointer(normalLoc, 3, GL_FLOAT, GL_FALSE, sizeof(CubeVertex), (GLubyte*)(3*sizeof(float)));
-    }
-    
-    // unbind vbo and ibo
-    glBindVertexArray(0);
-    glUseProgram(0);
-  }
-  gl_check_error("post ctor");
-}
-
 // creates perspective projection matrix for right-handed coordinate system
 static mat4 perspective(float fovy, float aspect, float znear, float zfar) {
   
@@ -318,6 +278,137 @@ static mat4 create_view(vec3 eye, float pitch, float yaw) {
               0.f, 0.f, 0.f, 1.f);
 }
 
+static mat4 create_model(vec3 model_translation, float model_rotation, float model_scale) {
+  const mat4 translation = mat4::translation(model_translation);
+  const mat4 rotation = mat4::rotation(vec3::kUnitY, model_rotation);
+  const mat4 scale = mat4::scale(model_scale, model_scale, model_scale);
+  return translation * rotation * scale;
+}
+
+static void create_mesh(CubeVertex* vertices, uint32_t vertices_size, uint16_t* indices, uint16_t indices_size, uint32_t& vbo, uint32_t& ibo) {
+  glGenBuffers(1, &vbo);
+  glBindBuffer(GL_ARRAY_BUFFER, vbo);
+  glBufferData(GL_ARRAY_BUFFER, vertices_size, vertices, GL_STATIC_DRAW);
+  glBindBuffer(GL_ARRAY_BUFFER, 0);
+  
+  glGenBuffers(1, &ibo);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
+  glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices_size, indices, GL_STATIC_DRAW);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+}
+
+static void create_vbo(uint32_t& vao, uint32_t program, uint32_t vbo, uint32_t ibo) {
+  glUseProgram(program);
+  glGenVertexArrays(1, &vao);
+  glBindVertexArray(vao);
+  
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
+  glBindBuffer(GL_ARRAY_BUFFER, vbo);
+  
+  const int positionLoc = glGetAttribLocation(program, "VertexPosition");
+  const int normalLoc = glGetAttribLocation(program, "VertexNormal");
+  
+  if(positionLoc >= 0) {
+    glEnableVertexAttribArray(positionLoc);
+    glVertexAttribPointer(positionLoc, 3, GL_FLOAT, GL_FALSE, sizeof(CubeVertex), (GLubyte*)0);
+  }
+  
+  if(normalLoc >= 0) {
+    glEnableVertexAttribArray(normalLoc);
+    glVertexAttribPointer(normalLoc, 3, GL_FLOAT, GL_FALSE, sizeof(CubeVertex), (GLubyte*)(3*sizeof(float)));
+  }
+  
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+  glBindBuffer(GL_ARRAY_BUFFER, 0);
+  glBindVertexArray(0);
+  glUseProgram(0);
+}
+
+void render_object(uint32_t program, uint32_t vao, uint32_t vbo, uint32_t ibo,
+                   uint32_t numIndices, vec3 color, mat4 model, mat4 view, mat4 projection,
+                   vec3 cameraPosition) {
+  glUseProgram(program);
+  
+  const int eyeLoc = glGetUniformLocation(program, "EyePosition");
+  const int lightLoc = glGetUniformLocation(program, "LightPosition");
+  const int vertexColorLoc = glGetUniformLocation(program, "VertexColor");
+  
+  if ( eyeLoc >= 0 ) {
+    glUniform3fv(eyeLoc, 1, cameraPosition.coords);
+    gl_check_error("eyeLoc");
+  }
+  
+  if (lightLoc >= 0) {
+    const vec3 lightPosition(10.f, 10.f, 10.f);
+    glUniform3fv(lightLoc, 1, lightPosition.coords);
+    gl_check_error("lightLoc");
+  }
+  
+  if(vertexColorLoc) {
+    vec4 color4(color.x, color.y, color.z, 1.f);
+    glUniform4fv(vertexColorLoc, 1, color4.coords);
+    gl_check_error("vertexColorLoc");
+  }
+  
+  const mat4 modelView = view * model;
+  const mat4 modelViewProjection = projection * modelView;
+  
+  const int modelLoc = glGetUniformLocation(program, "Model");
+  const int modelViewLoc = glGetUniformLocation(program, "ModelView");
+  const int modelViewProjectionLoc = glGetUniformLocation(program, "ModelViewProjection");
+  
+  if(modelLoc >= 0) {
+    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, model.matrix);
+  }
+  
+  if(modelViewLoc >= 0) {
+    glUniformMatrix4fv(modelViewLoc, 1, GL_FALSE, modelView.matrix);
+  }
+  
+  if(modelViewProjectionLoc >= 0) {
+    glUniformMatrix4fv(modelViewProjectionLoc, 1, GL_FALSE, modelViewProjection.matrix);
+  }
+  gl_check_error("matrices");
+  
+  glBindVertexArray(vao);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
+  glBindBuffer(GL_ARRAY_BUFFER, vbo);
+  
+  glDrawElements(GL_TRIANGLES, numIndices,
+                 GL_UNSIGNED_SHORT, nullptr);
+  
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+  glBindBuffer(GL_ARRAY_BUFFER, 0);
+  glBindVertexArray(0);
+  glUseProgram(0);
+  
+  gl_check_error("postrender");
+}
+
+Renderer::Renderer() {
+  printf("gl version: %s\n", glGetString(GL_VERSION));
+  printf("glsl version: %s\n", glGetString(GL_SHADING_LANGUAGE_VERSION));
+  
+  // load program
+  m_programId = load_program("shader/main.vert", "shader/main.frag");
+  if(0 == m_programId) {
+    printf("error: program not created\n");
+    return;
+  }
+  
+  gl_check_error("load_program");
+  
+  // create vertex/index buffers
+  create_mesh(kCubeVertices, sizeof(kCubeVertices), kCubeIndices, sizeof(kCubeIndices), m_cubeVbo, m_cubeIbo);
+  create_mesh(kGroundVertices, sizeof(kGroundVertices), kGroundIndices, sizeof(kGroundIndices), m_groundVbo, m_groundIbo);
+  
+  // create vertex array object and bind the vertex attributes
+  create_vbo(m_cubeVao, m_programId, m_cubeVbo, m_cubeIbo);
+  create_vbo(m_groundVao, m_programId, m_groundVbo, m_groundIbo);
+  
+  gl_check_error("post ctor");
+}
+
 Renderer::~Renderer() {
   glDeleteProgram(m_programId);
 }
@@ -354,79 +445,35 @@ void Renderer::BeginScene(int width, int height) {
   gl_check_error("beginscene");
 }
 
-void Renderer::RenderWorld(vec3 cameraPosition, const World& world) {
-  glUseProgram(m_programId);
-  
-  const int eyeLoc = glGetUniformLocation(m_programId, "EyePosition");
-  const int lightLoc = glGetUniformLocation(m_programId, "LightPosition");
-  const int vertexColorLoc = glGetUniformLocation(m_programId, "VertexColor");
-  
-  if ( eyeLoc >= 0 ) {
-    glUniform3fv(eyeLoc, 1, cameraPosition.coords);
-    gl_check_error("eyeLoc");
-  }
-  
-  if (lightLoc >= 0) {
-    const vec3 lightPosition(10.f, 10.f, 10.f);
-    glUniform3fv(lightLoc, 1, lightPosition.coords);
-    gl_check_error("lightLoc");
-  }
-  
-  if(vertexColorLoc) {
-    vec4 color(world.m_cube.m_color.x, world.m_cube.m_color.y, world.m_cube.m_color.z, 1.f);
-    glUniform4fv(vertexColorLoc, 1, color.coords);
-    gl_check_error("vertexColorLoc");
-  }
-  
-  vec3 model_translation = world.m_cube.m_translation;
-  float model_rotation = world.m_cube.m_rotation;
-  float model_scale = world.m_cube.m_scale;
-  
+void Renderer::RenderWorld(vec3 cameraPosition, vec3 cameraForward, const World& world) {
 #if 0
   const vec3 lookAt = model_translation;
 #else
-  const vec3 lookAt = cameraPosition - vec3::kUnitZ;
+  //const vec3 lookAt = cameraPosition - vec3::kUnitZ;
+  const vec3 lookAt = cameraPosition + cameraForward;
 #endif
-  
-  const mat4 translation = mat4::translation(model_translation);
-  const mat4 rotation = mat4::rotation(vec3::kUnitY, model_rotation);
-  const mat4 scale = mat4::scale(model_scale, model_scale, model_scale);
-  const mat4 model = translation * rotation * scale;
   
   const mat4 view = create_view(cameraPosition, lookAt, vec3::kUnitY);
   const mat4 projection = perspective(40.f, m_ar, 0.1f, 100.f);
   //const mat4 projection = ortho(-10.f, 10.f, -10.f, 10.f, 0.1f, 100.f);
   
-  const mat4 modelView = view * model;
-  const mat4 modelViewProjection = projection * modelView;
-  
-  const int modelLoc = glGetUniformLocation(m_programId, "Model");
-  const int modelViewLoc = glGetUniformLocation(m_programId, "ModelView");
-  const int modelViewProjectionLoc = glGetUniformLocation(m_programId, "ModelViewProjection");
-  
-  if(modelLoc >= 0) {
-    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, model.matrix);
+  {
+    const mat4 model = create_model(world.m_cube.m_translation, world.m_cube.m_rotation, world.m_cube.m_scale);
+    render_object(m_programId, m_cubeVao, m_cubeVbo, m_cubeIbo, sizeof(kCubeIndices) / sizeof(kCubeIndices[0]),
+                  vec3(1.f, 0.f, 1.f), model, view, projection, cameraPosition);
   }
-  
-  if(modelViewLoc >= 0) {
-    glUniformMatrix4fv(modelViewLoc, 1, GL_FALSE, modelView.matrix);
+  {
+    const mat4 model = create_model(world.m_cube.m_translation + vec3(4.f, 0.f, 0.f),
+                                    world.m_cube.m_rotation + M_PI_2,
+                                    world.m_cube.m_scale * 0.5f);
+    render_object(m_programId, m_cubeVao, m_cubeVbo, m_cubeIbo, sizeof(kCubeIndices) / sizeof(kCubeIndices[0]),
+                  vec3(0.f, 1.f, 1.f), model, view, projection, cameraPosition);
   }
-  
-  if(modelViewProjectionLoc >= 0) {
-    glUniformMatrix4fv(modelViewProjectionLoc, 1, GL_FALSE, modelViewProjection.matrix);
+  {
+    const mat4 model = create_model(vec3::kZero, 0.f, 10000.f);
+    render_object(m_programId, m_groundVao, m_groundVbo, m_groundIbo, sizeof(kGroundIndices) / sizeof(kGroundIndices[0]),
+                  vec3(0.886f, 0.956f, 0.258f), model, view, projection, cameraPosition);
   }
-  gl_check_error("matrices");
-  
-  glBindVertexArray(m_cubeVao);
-  
-  uint32_t numIndices = sizeof(kCubeIndices) / sizeof(kCubeIndices[0]);
-  glDrawElements(GL_TRIANGLES, numIndices,
-                 GL_UNSIGNED_SHORT, nullptr);
-  
-  glBindVertexArray(0);
-  glUseProgram(0);
-  
-  gl_check_error("postrender");
 }
 
 void Renderer::EndScene() {

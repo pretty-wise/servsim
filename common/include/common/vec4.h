@@ -25,8 +25,6 @@ public:
   inline vec4 operator*(float) const;
   inline vec4 operator/(float) const;
 
-  inline void set(float x, float y, float z, float w);
-
   inline bool operator==(const vec4 &) const;
   inline bool operator!=(const vec4 &) const;
 
@@ -107,13 +105,6 @@ inline vec4 vec4::operator*(float a) const {
 inline vec4 vec4::operator/(float a) const {
   float inverse = 1 / a; // dzielenie wolniejsze.
   return vec4(x * inverse, y * inverse, z * inverse, w * inverse);
-}
-
-inline void vec4::set(float _x, float _y, float _z, float _w) {
-  x = _x;
-  y = _y;
-  z = _z;
-  w = _w;
 }
 
 inline bool vec4::operator==(const vec4 &v) const {

@@ -21,7 +21,7 @@ Game::Game()
 , m_tick_time(100.f)
 , m_tick_countdown(m_tick_time){
   World& initial_state = m_state[0];
-  initial_state.m_cube.m_translation = vec3(0.f, 0.f, 0.f);
+  initial_state.m_cube.m_translation = vec3(0.f, 1.f, 0.f);
   initial_state.m_cube.m_rotation = 0.f;
   initial_state.m_cube.m_scale = 1.f;
 }
@@ -54,9 +54,9 @@ void Game::Step() {
     tick_world(m_state[t], m_input[t], m_state[t+1]);
   }
   
-  printf("tick: %llu, ", m_current_tick);
+  /*printf("tick: %llu, ", m_current_tick);
   printf("input: %c%c%c%c\n", m_input[previous_tick].IsKeyDown(Input::Key::kForward) ? 'w' : '-',
                                m_input[previous_tick].IsKeyDown(Input::Key::kBack) ? 's' : '-',
                                m_input[previous_tick].IsKeyDown(Input::Key::kLeft) ? 'a' : '-',
-                               m_input[previous_tick].IsKeyDown(Input::Key::kRight) ? 'd' : '-');
+                               m_input[previous_tick].IsKeyDown(Input::Key::kRight) ? 'd' : '-');*/
 }
